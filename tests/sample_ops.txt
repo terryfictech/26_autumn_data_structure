@@ -1,0 +1,6 @@
+# Capacity 2: GET 2 must miss because PUT 3 evicts it.
+PUT 1 1
+PUT 2 2
+GET 1
+PUT 3 3
+GET 2

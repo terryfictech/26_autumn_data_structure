@@ -1,0 +1,10 @@
+# Compiled output
+/build/
+/bin/
+*.exe
+*.out
+*.o
+*.obj
+*.log
+*.tmp
+Thumbs.db
