@@ -179,8 +179,8 @@ int cache_put(Cache *cache, int key, int value) {
 void print_cache(const Cache *cache) {
     int i;
     Node *p;
-    printf("MRU -> LRU: ");
-    if (cache->size == 0) printf("(empty)");
+    printf("最近使用->最久未使用: ");
+    if (cache->size == 0) printf("(缓存为空)");
     if (cache->kind == 1) {
         for (i = 0; i < cache->size; ++i)
             printf("(%d:%d) ", cache->array[i].key, cache->array[i].value);
@@ -194,7 +194,7 @@ void print_cache(const Cache *cache) {
 void print_stats(const Stats *stats) {
     int accesses = stats->hits + stats->misses;
     double rate = accesses == 0 ? 0.0 : 100.0 * stats->hits / accesses;
-    printf("Hits: %d, misses: %d, hit rate: %.2f%%, evictions: %d\n",
+    printf("Hits: %d, misses: %d, 命中率: %.2f%%, evictions: %d\n",
            stats->hits, stats->misses, rate, stats->evictions);
 }
 
@@ -205,7 +205,7 @@ int load_operations(const char *path, Operation **operations, int *count) {
     int used = 0, capacity = 0, line_number = 0, ok = 1;
     char line[256];
     if (file == NULL) {
-        printf("Cannot open file: %s\n", path);
+        printf("无法打开文件：%s\n", path);
         return 0;
     }
     while (fgets(line, sizeof(line), file) != NULL) {
@@ -228,7 +228,7 @@ int load_operations(const char *path, Operation **operations, int *count) {
             op.key = key;
             op.value = value;
         } else {
-            printf("Invalid operation at line %d.\n", line_number);
+            printf("第 %d 行的操作格式不正确。\n", line_number);
             ok = 0;
             break;
         }
@@ -236,7 +236,7 @@ int load_operations(const char *path, Operation **operations, int *count) {
             int new_capacity = capacity == 0 ? 64 : capacity * 2;
             Operation *new_data = (Operation *)realloc(data, (size_t)new_capacity * sizeof(Operation));
             if (new_data == NULL) {
-                puts("Not enough memory for operations.");
+                puts("内存不足，无法保存操作。");
                 ok = 0;
                 break;
             }
@@ -248,7 +248,7 @@ int load_operations(const char *path, Operation **operations, int *count) {
     if (ferror(file)) ok = 0;
     fclose(file);
     if (!ok || used == 0) {
-        if (used == 0 && ok) puts("Operation file is empty.");
+        if (used == 0 && ok) puts("操作文件为空。");
         free(data);
         return 0;
     }
@@ -285,7 +285,7 @@ void run_on_active(Cache *cache, const Operation *data, int count, int show_each
     int i, hit, value;
     for (i = 0; i < count; ++i) {
         if (!execute(cache, data[i], &hit, &value)) {
-            puts("Stopped: not enough memory.");
+            puts("内存不足，已停止执行。");
             return;
         }
         if (show_each) {
@@ -295,7 +295,7 @@ void run_on_active(Cache *cache, const Operation *data, int count, int show_each
             print_cache(cache);
         }
     }
-    printf("Executed %d operations.\n", count);
+    printf("已执行 %d 次操作。\n", count);
     print_stats(&cache->stats);
 }
 
@@ -351,7 +351,7 @@ int compare(const Operation *data, int count, int capacity) {
             }
         }
         printf("Operations: %d, capacity: %d\n", count, capacity);
-        puts("         Total ms   us/operation   Hit rate   Evictions");
+        puts("         总耗时(ms)   平均耗时(us/次)   命中率   Evictions");
         for (k = 0; k < 2; ++k) {
             Stats s = caches[k].stats;
             int accesses = s.hits + s.misses;
@@ -359,9 +359,9 @@ int compare(const Operation *data, int count, int capacity) {
             printf("%-7s  %8.3f   %12.3f   %7.2f%%   %d\n", k == 0 ? "Array" : "List",
                    milliseconds[k], milliseconds[k] * 1000.0 / count, rate, s.evictions);
         }
-        printf("Results agree: %s\n", equal ? "yes" : "NO");
+        printf("结果一致：%s\n", equal ? "是" : "否");
     } else {
-        puts("Not enough memory for comparison.");
+        puts("内存不足，无法进行对比。");
     }
     for (k = 0; k < 2; ++k) {
         free(values[k]);
@@ -378,13 +378,13 @@ void page_experiment(int capacity) {
     for (kind = 1; kind <= 2; ++kind) {
         Cache cache;
         if (!cache_init(&cache, kind, capacity)) {
-            puts("Not enough memory.");
+            puts("内存不足。");
             return;
         }
         for (i = 0; i < (int)(sizeof(pages) / sizeof(pages[0])); ++i) {
             if (!cache_get(&cache, pages[i], &value) &&
                 !cache_put(&cache, pages[i], pages[i])) {
-                puts("Not enough memory.");
+                puts("内存不足。");
                 cache_destroy(&cache);
                 return;
             }
@@ -406,13 +406,13 @@ int read_int(const char *prompt, int minimum, int maximum, int *result) {
             *result = value;
             return 1;
         }
-        printf("Enter an integer from %d to %d.\n", minimum, maximum);
+        printf("请输入 %d 到 %d 之间的整数。\n", minimum, maximum);
     }
 }
 
 int read_path(char *path, size_t size) {
     size_t length;
-    printf("Operation file path: ");
+    printf("操作文件路径：");
     if (fgets(path, (int)size, stdin) == NULL) return 0;
     length = strlen(path);
     if (length > 0 && path[length - 1] == '\n') path[length - 1] = '\0';
@@ -428,11 +428,11 @@ int main(void) {
         int count = 0, key, value, seed, largest_key, hit;
         char path[512];
         printf("\nLRU (%s, capacity %d)\n", kind == 1 ? "array" : "list", capacity);
-        puts("1 Choose array/list (reset)   2 Set capacity (reset)");
-        puts("3 GET   4 PUT   5 Show cache   6 Show statistics");
-        puts("7 Run file   8 Run random   9 Compare file   10 Compare random");
-        printf("11 Toggle each-step output (%s)   12 Page experiment   0 Exit\n",
-               show_each ? "on" : "off");
+        puts("1 选择顺序表/链表（重置缓存）   2 设置容量（重置缓存）");
+        puts("3 GET   4 PUT   5 查看缓存   6 查看统计");
+        puts("7 从文件执行   8 随机生成并执行   9 文件数据对比   10 随机数据对比");
+        printf("11 切换逐步输出（%s）   12 页面置换实验   0 退出\n",
+               show_each ? "开启" : "关闭");
         if (!read_int("Choice: ", 0, 12, &choice) || choice == 0) break;
         if (choice == 1 || choice == 2) {
             Cache replacement;
@@ -447,7 +447,7 @@ int main(void) {
                 cache = replacement;
                 kind = new_kind;
                 capacity = new_capacity;
-            } else puts("Not enough memory; previous cache remains active.");
+            } else puts("内存不足，仍使用原来的缓存。");
         } else if (choice == 3) {
             if (!read_int("Key: ", INT_MIN, INT_MAX, &key)) break;
             hit = cache_get(&cache, key, &value);
@@ -456,28 +456,28 @@ int main(void) {
         } else if (choice == 4) {
             if (!read_int("Key: ", INT_MIN, INT_MAX, &key) ||
                 !read_int("Value: ", INT_MIN, INT_MAX, &value)) break;
-            if (!cache_put(&cache, key, value)) puts("Not enough memory.");
+            if (!cache_put(&cache, key, value)) puts("内存不足。");
             if (show_each) print_cache(&cache);
         } else if (choice == 5) print_cache(&cache);
         else if (choice == 6) print_stats(&cache.stats);
         else if (choice == 11) show_each = !show_each;
         else if (choice == 12) {
-            if (!read_int("Page-frame capacity: ", 1, 1000000, &value)) break;
+            if (!read_int("页面容量：", 1, 1000000, &value)) break;
             page_experiment(value);
         } else {
             if (choice == 7 || choice == 9) {
                 if (!read_path(path, sizeof(path))) {
-                    puts("File path cannot be empty.");
+                    puts("文件路径不能为空。");
                     continue;
                 }
                 if (!load_operations(path, &data, &count)) continue;
             } else {
-                if (!read_int("Operation count (1..1000000): ", 1, 1000000, &count) ||
-                    !read_int("Largest key (0..10000): ", 0, 10000, &largest_key) ||
-                    !read_int("Random seed: ", 0, INT_MAX, &seed)) break;
+                if (!read_int("操作次数 (1..1000000)：", 1, 1000000, &count) ||
+                    !read_int("最大 key (0..10000)：", 0, 10000, &largest_key) ||
+                    !read_int("随机种子：", 0, INT_MAX, &seed)) break;
                 data = random_operations(count, largest_key, (unsigned int)seed);
                 if (data == NULL) {
-                    puts("Not enough memory for operations.");
+                    puts("内存不足，无法保存操作。");
                     continue;
                 }
             }
