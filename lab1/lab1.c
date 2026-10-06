@@ -194,7 +194,7 @@ void print_cache(const Cache *cache){
 void print_stats(const Stats *stats){
     int accesses=stats->hits+stats->misses;
     double rate=accesses==0?0.0:100.0*stats->hits/accesses;
-    printf("Hits: %d, misses: %d, 命中率: %.2f%%, evictions: %d\n",
+    printf("Hits: %d, misses: %d, hit rate: %.2f%%, evictions: %d\n",
            stats->hits,stats->misses,rate,stats->evictions);
 }
 
@@ -279,11 +279,12 @@ int execute(Cache *cache,Operation op,int *hit,int *value){
     *hit=0;
     *value=0;
     return cache_put(cache,op.key,op.value);
+    //返回值表示execute是否成功，不代表是否命中
 }
 
 void run_on_active(Cache *cache,const Operation *data,int count,int show_each){
-    int i,hit,value;
-    for(i=0;i<count;i++){
+    int hit,value;
+    for(int i=0;i<count;i++){
         if(!execute(cache,data[i],&hit,&value)){
             puts("内存不足，已停止执行。");
             return;
@@ -391,6 +392,7 @@ void page_experiment(int capacity){
         }
         printf("%s: ",kind==1?"Array":"List");
         print_stats(&cache.stats);
+        print_cache(&cache);
         cache_destroy(&cache);
     }
 }
@@ -423,7 +425,7 @@ int main(void){
     Cache cache;
     int choice,kind=1,capacity=3,show_each=0;
     if(!cache_init(&cache,kind,capacity)) return 1;
-    for(;;){
+    while(1){
         Operation *data=NULL;
         int count=0,key,value,seed,largest_key,hit;
         char path[512];
