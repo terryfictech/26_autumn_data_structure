@@ -6,46 +6,46 @@
 #include <time.h>
 
 /* 表头（下标 0 或头结点之后）表示最近使用；表尾表示最久未使用。 */
-typedef struct {
+typedef struct{
     int key;
     int value;
-} Item;
+}Item;
 
-typedef struct Node {
+typedef struct Node{
     Item item;
     struct Node *next;
-} Node;
+}Node;
 
-typedef struct {
-    int hits;
-    int misses;
-    int evictions;
-} Stats;
+typedef struct{
+    int hits;//get找到key的次数
+    int misses;//get没找到key的次数
+    int evictions;//缓存满时，插入新key导致淘汰的key次数
+}Stats;
 
-typedef struct {
-    int kind;              /* 1: 顺序表；2: 带头结点的单链表 */
+typedef struct{
+    int kind;              // 1: 顺序表；2: 带头结点的单链表
     int capacity;
     int size;
     Item *array;
     Node *head;
     Stats stats;
-} Cache;
+}Cache;
 
-typedef struct {
-    int type;              /* 1: GET；2: PUT */
+typedef struct{
+    int type;              // 1: GET；2: PUT 
     int key;
     int value;
-} Operation;
+}Operation;
 
 /* 初始化和销毁缓存。切换实现或容量时重新初始化。 */
-int cache_init(Cache *cache, int kind, int capacity) {
-    memset(cache, 0, sizeof(*cache));
-    if (capacity <= 0 || (kind != 1 && kind != 2)) return 0;
-    cache->kind = kind;
-    cache->capacity = capacity;
-    if (kind == 1) {
-        cache->array = (Item *)malloc((size_t)capacity * sizeof(Item));
-        return cache->array != NULL;
+int cache_init(Cache *cache,int kind,int capacity){
+    memset(cache,0,sizeof(*cache));
+    if(capacity<=0 || (kind!=1 && kind!=2)) return 0;
+    cache->kind=kind;
+    cache->capacity=capacity;
+    if (kind==1) {
+        cache->array=(Item*)malloc((size_t)capacity*sizeof(Item));
+        return cache->array!=NULL;
     }
     cache->head = (Node *)malloc(sizeof(Node));
     if (cache->head == NULL) return 0;
@@ -53,15 +53,15 @@ int cache_init(Cache *cache, int kind, int capacity) {
     return 1;
 }
 
-void cache_destroy(Cache *cache) {
-    Node *p = cache->head;
-    while (p != NULL) {
-        Node *next = p->next;
+void cache_destroy(Cache *cache){
+    Node *p=cache->head;
+    while(p!=NULL){
+        Node *next=p->next;
         free(p);
-        p = next;
+        p=next;
     }
     free(cache->array);
-    memset(cache, 0, sizeof(*cache));
+    memset(cache,0,sizeof(*cache));
 }
 
 /* 顺序表：找到元素后，把前面的元素右移一格，再放到下标 0。 */
